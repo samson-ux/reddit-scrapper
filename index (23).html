@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit Research Tool</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1a, #1a1a2e, #16213e);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 40px 20px; }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { color: #a0a0a0; font-size: 1.1rem; }
+
+        .steps-container { display: flex; gap: 20px; margin: 30px 0; flex-wrap: wrap; }
+        .step-card {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 25px;
+            transition: all 0.3s;
+        }
+        .step-card.active { border-color: #667eea; background: rgba(102,126,234,0.1); }
+        .step-card.completed { border-color: #00d26a; background: rgba(0,210,106,0.1); }
+        .step-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .step-number {
+            width: 40px; height: 40px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 1.2rem;
+        }
+        .step-card.active .step-number { background: #667eea; }
+        .step-card.completed .step-number { background: #00d26a; }
+        .step-title { font-size: 1.2rem; font-weight: 600; }
+
+        .input-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #ccc; font-size: 0.9rem; }
+        input, select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        input:focus, select:focus { outline: none; border-color: #667eea; }
+        input::placeholder { color: #666; }
+        select option { background: #1a1a2e; color: #fff; }
+
+        .goal-container { display: flex; gap: 10px; }
+        .goal-container select { width: 220px; flex-shrink: 0; }
+        .goal-container input { flex: 1; }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(102,126,234,0.4); }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-success { background: linear-gradient(135deg, #00d26a, #00a854); color: #fff; }
+        .btn-small { padding: 10px 18px; font-size: 0.9rem; }
+
+        .tags-container { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; max-height: 250px; overflow-y: auto; }
+        .tag {
+            background: rgba(102,126,234,0.2);
+            border: 1px solid rgba(102,126,234,0.5);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tag:hover { background: rgba(102,126,234,0.4); }
+        .tag.selected { background: #667eea; border-color: #667eea; }
+
+        .add-tag-input { display: flex; gap: 10px; margin-top: 12px; }
+        .add-tag-input input { flex: 1; padding: 10px 15px; }
+
+        .subreddit-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .subreddit-chip {
+            background: rgba(0,210,106,0.2);
+            border: 1px solid rgba(0,210,106,0.5);
+            color: #00d26a;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .subreddit-chip:hover { background: rgba(0,210,106,0.4); }
+        .subreddit-chip.selected { background: #00d26a; color: #000; font-weight: 600; }
+
+        .results-container { margin-top: 30px; }
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 15px;
+        }
+        .results-stats { display: flex; gap: 30px; }
+        .stat { text-align: center; }
+        .stat-value { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .stat-label { font-size: 0.85rem; color: #888; }
+
+        .filter-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        .filter-tab {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 20px;
+            color: #ccc;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        .filter-tab:hover { background: rgba(255,255,255,0.2); }
+        .filter-tab.active { background: #667eea; color: #fff; }
+
+        .comments-grid { display: grid; gap: 15px; }
+        .comment-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+        .comment-card:hover { background: rgba(255,255,255,0.08); transform: translateX(5px); }
+        .comment-post-title { font-size: 0.9rem; color: #888; margin-bottom: 10px; }
+        .comment-post-title a { color: #667eea; text-decoration: none; }
+        .comment-post-title a:hover { text-decoration: underline; }
+        .comment-header { display: flex; justify-content: space-between; gap: 15px; }
+        .comment-body { color: #ddd; font-size: 1rem; line-height: 1.7; flex: 1; }
+        .comment-stats { color: #667eea; font-size: 1rem; font-weight: 600; flex-shrink: 0; }
+        .comment-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .comment-tag { background: rgba(240,147,251,0.2); color: #f093fb; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; }
+        .comment-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .spinner {
+            width: 60px; height: 60px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { margin-top: 20px; font-size: 1.2rem; color: #fff; }
+        .loading-subtext { margin-top: 8px; font-size: 0.95rem; color: #888; }
+        .loading-log {
+            margin-top: 20px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 250px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.5);
+            border-radius: 12px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .loading-log div { margin: 5px 0; }
+        .loading-log .success { color: #00d26a; }
+        .loading-log .error { color: #ff4757; }
+        .loading-log .info { color: #667eea; }
+
+        .ai-thinking {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px;
+            background: rgba(102,126,234,0.15);
+            border-radius: 12px;
+            margin: 15px 0;
+        }
+        .ai-dots { display: flex; gap: 5px; }
+        .ai-dot {
+            width: 10px; height: 10px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .ai-dot:nth-child(1) { animation-delay: -0.32s; }
+        .ai-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+        .error-message {
+            background: rgba(255,71,87,0.2);
+            border: 1px solid rgba(255,71,87,0.5);
+            color: #ff4757;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .hidden { display: none !important; }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .steps-container { flex-direction: column; }
+            .goal-container { flex-direction: column; }
+            .goal-container select { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧠 Reddit Research Tool</h1>
+            <p class="subtitle">AI-powered research - Claude generates smart tags for any topic</p>
+        </header>
+
+        <!-- API Key Section -->
+        <div style="background: rgba(102,126,234,0.15); border: 1px solid rgba(102,126,234,0.4); border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <span style="font-weight: 500;">🔑 API Key:</span>
+            <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." style="flex: 1; min-width: 250px; padding: 10px 15px; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; background: rgba(0,0,0,0.3); color: #fff; font-family: monospace;" />
+            <button class="btn btn-small btn-secondary" onclick="toggleKey()">👁</button>
+            <span id="apiStatus" style="font-size: 0.85rem; color: #888;">Not set</span>
+        </div>
+
+        <div class="steps-container">
+            <div class="step-card active" id="step1Card">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Enter Topic</div>
+                </div>
+
+                <div class="input-group">
+                    <label>What do you want to research?</label>
+                    <input type="text" id="topicInput" placeholder="e.g., UFC, real estate, mechanical keyboards, K-pop..." />
+                </div>
+
+                <div class="input-group">
+                    <label>Research goal (pick OR type your own)</label>
+                    <div class="goal-container">
+                        <select id="goalSelect" onchange="handleGoalSelect()">
+                            <option value="">-- Quick options --</option>
+                            <option value="Find business opportunities">💰 Business ideas</option>
+                            <option value="Discover current trends">📈 Trends</option>
+                            <option value="Find problems and complaints">😤 Problems</option>
+                            <option value="Product research">🛒 Products</option>
+                            <option value="Understand opinions and debates">💬 Opinions</option>
+                        </select>
+                        <input type="text" id="goalInput" placeholder="Or type your goal..." />
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="generateTags()">
+                    🤖 Generate Smart Tags
+                </button>
+
+                <div id="step1Error" class="error-message hidden"></div>
+            </div>
+
+            <div class="step-card" id="step2Card">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Review Tags</div>
+                </div>
+                
+                <div id="aiThinking" class="ai-thinking hidden">
+                    <div class="ai-dots"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>
+                    <span>Claude is generating tags...</span>
+                </div>
+
+                <div id="tagsSection" class="hidden">
+                    <label>Search Tags (click to toggle)</label>
+                    <div class="tags-container" id="tagsContainer"></div>
+                    <div class="add-tag-input">
+                        <input type="text" id="newTagInput" placeholder="Add custom tag..." />
+                        <button class="btn btn-secondary btn-small" onclick="addCustomTag()">+ Add</button>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <label>Subreddits</label>
+                        <div class="subreddit-chips" id="subredditsContainer"></div>
+                        <div class="add-tag-input">
+                            <input type="text" id="newSubInput" placeholder="Add subreddit..." />
+                            <button class="btn btn-secondary btn-small" onclick="addCustomSubreddit()">+ Add</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 25px;">
+                        <button class="btn btn-success" onclick="startScraping()">
+                            🚀 Scrape Comments
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card" id="step3Card">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Results</div>
+                </div>
+                <div id="resultsPreview"><p style="color:#666;">Comments appear here</p></div>
+            </div>
+        </div>
+
+        <div id="fullResults" class="results-container hidden">
+            <div class="results-header">
+                <div class="results-stats">
+                    <div class="stat"><div class="stat-value" id="totalComments">0</div><div class="stat-label">Comments</div></div>
+                    <div class="stat"><div class="stat-value" id="totalPosts">0</div><div class="stat-label">Posts</div></div>
+                    <div class="stat"><div class="stat-value" id="totalUpvotes">0</div><div class="stat-label">Upvotes</div></div>
+                </div>
+                <div style="display:flex;gap:10px;">
+                    <button class="btn btn-secondary" onclick="exportCSV()">📥 CSV</button>
+                    <button class="btn btn-secondary" onclick="exportJSON()">📥 JSON</button>
+                </div>
+            </div>
+            <div class="filter-tabs" id="categoryFilters"></div>
+            <div class="comments-grid" id="commentsGrid"></div>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText">Loading...</div>
+        <div class="loading-subtext" id="loadingSubtext">Please wait</div>
+        <div class="loading-log" id="loadingLog"></div>
+    </div>
+
+    <script>
+        let generatedTags = [];
+        let selectedTags = [];
+        let suggestedSubreddits = [];
+        let selectedSubreddits = [];
+        let allComments = [];
+        let categorizedComments = {};
+        let currentTopic = '';
+        let postsSearched = 0;
+
+        // Load saved API key
+        const savedKey = localStorage.getItem('anthropic_api_key');
+        if (savedKey) {
+            document.getElementById('apiKeyInput').value = savedKey;
+            document.getElementById('apiStatus').textContent = '✓ Saved';
+            document.getElementById('apiStatus').style.color = '#00d26a';
+        }
+
+        function toggleKey() {
+            const input = document.getElementById('apiKeyInput');
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        function getApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (key) {
+                localStorage.setItem('anthropic_api_key', key);
+                document.getElementById('apiStatus').textContent = '✓ Saved';
+                document.getElementById('apiStatus').style.color = '#00d26a';
+            }
+            return key;
+        }
+
+        function handleGoalSelect() {
+            const s = document.getElementById('goalSelect');
+            if (s.value) document.getElementById('goalInput').value = s.value;
+        }
+
+        async function generateTags() {
+            const topic = document.getElementById('topicInput').value.trim();
+            const goal = document.getElementById('goalInput').value.trim() || 'general research';
+            const apiKey = getApiKey();
+
+            if (!apiKey) {
+                showError('step1Error', 'Please enter your Claude API key above');
+                return;
+            }
+
+            if (!topic) {
+                showError('step1Error', 'Please enter a topic');
+                return;
+            }
+
+            currentTopic = topic;
+            hideError('step1Error');
+
+            document.getElementById('step1Card').classList.remove('active');
+            document.getElementById('step1Card').classList.add('completed');
+            document.getElementById('step2Card').classList.add('active');
+            document.getElementById('aiThinking').classList.remove('hidden');
+            document.getElementById('tagsSection').classList.add('hidden');
+
+            try {
+                const result = await generateTagsWithClaude(topic, goal, apiKey);
+                
+                generatedTags = result.tags || [];
+                suggestedSubreddits = result.subreddits || [];
+                selectedTags = [...generatedTags];
+                selectedSubreddits = [...suggestedSubreddits].slice(0, 6);
+
+                renderTags();
+                renderSubreddits();
+
+                document.getElementById('aiThinking').classList.add('hidden');
+                document.getElementById('tagsSection').classList.remove('hidden');
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('aiThinking').innerHTML = `
+                    <span style="color:#ff4757;">Error: ${error.message}</span>
+                `;
+            }
+        }
+
+        async function generateTagsWithClaude(topic, goal, apiKey) {
+            const prompt = `You are a Reddit research expert. Generate search tags for researching "${topic}" with goal: "${goal}".
+
+Create a flat list of 20-30 highly specific, useful search tags including:
+- Key people/figures (current champions, CEOs, influencers, experts) - spell names correctly
+- Recent events and news (2024-2025)
+- Community slang and jargon
+- Hot debates and controversies  
+- Common problems and complaints
+- Popular products/brands discussed
+- Specific subtopics people care about
+
+Also list 6-10 relevant subreddits.
+
+RULES:
+- Be SPECIFIC not generic (not "tips" but actual terms like "progressive overload" or "Ilia Topuria")
+- Include CURRENT events and figures
+- Use terms the community actually uses
+
+Respond with ONLY valid JSON:
+{"tags":["tag1","tag2",...],"subreddits":["sub1","sub2",...]}`;
+
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-dangerous-direct-browser-access': 'true'
+                },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 1500,
+                    messages: [{ role: 'user', content: prompt }]
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error?.message || 'API request failed');
+            }
+
+            const data = await response.json();
+            const text = data.content[0].text;
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error('Could not parse response');
+
+            return JSON.parse(jsonMatch[0]);
+        }
+
+        function renderTags() {
+            document.getElementById('tagsContainer').innerHTML = generatedTags.map(tag => `
+                <div class="tag ${selectedTags.includes(tag) ? 'selected' : ''}" onclick="toggleTag(this, '${escAttr(tag)}')">
+                    ${escHtml(tag)}
+                </div>
+            `).join('');
+        }
+
+        function toggleTag(el, tag) {
+            if (selectedTags.includes(tag)) {
+                selectedTags = selectedTags.filter(t => t !== tag);
+                el.classList.remove('selected');
+            } else {
+                selectedTags.push(tag);
+                el.classList.add('selected');
+            }
+        }
+
+        function addCustomTag() {
+            const input = document.getElementById('newTagInput');
+            const tag = input.value.trim();
+            if (tag && !generatedTags.includes(tag)) {
+                generatedTags.push(tag);
+                selectedTags.push(tag);
+                renderTags();
+                input.value = '';
+            }
+        }
+
+        function renderSubreddits() {
+            document.getElementById('subredditsContainer').innerHTML = suggestedSubreddits.map(sub => `
+                <div class="subreddit-chip ${selectedSubreddits.includes(sub) ? 'selected' : ''}" onclick="toggleSub(this, '${escAttr(sub)}')">
+                    r/${escHtml(sub)}
+                </div>
+            `).join('');
+        }
+
+        function toggleSub(el, sub) {
+            if (selectedSubreddits.includes(sub)) {
+                selectedSubreddits = selectedSubreddits.filter(s => s !== sub);
+                el.classList.remove('selected');
+            } else {
+                selectedSubreddits.push(sub);
+                el.classList.add('selected');
+            }
+        }
+
+        function addCustomSubreddit() {
+            const input = document.getElementById('newSubInput');
+            const sub = input.value.trim().replace(/^r\//, '');
+            if (sub && !suggestedSubreddits.includes(sub)) {
+                suggestedSubreddits.push(sub);
+                selectedSubreddits.push(sub);
+                renderSubreddits();
+                input.value = '';
+            }
+        }
+
+        async function startScraping() {
+            if (!selectedTags.length || !selectedSubreddits.length) {
+                alert('Select at least one tag and subreddit');
+                return;
+            }
+
+            document.getElementById('step2Card').classList.remove('active');
+            document.getElementById('step2Card').classList.add('completed');
+            document.getElementById('step3Card').classList.add('active');
+
+            showLoading('Starting...', 'Searching Reddit');
+            clearLog();
+
+            try {
+                allComments = await scrapeComments();
+                categorizedComments = categorize(allComments);
+                hideLoading();
+                renderResults();
+            } catch (e) {
+                hideLoading();
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function scrapeComments() {
+            const comments = [];
+            const seen = new Set();
+            postsSearched = 0;
+
+            addLog(`Searching ${selectedSubreddits.length} subreddits with ${selectedTags.length} tags`, 'info');
+
+            for (const sub of selectedSubreddits) {
+                addLog(`\n📁 r/${sub}`, 'info');
+
+                for (const tag of selectedTags.slice(0, 12)) {
+                    updateLoading(`r/${sub}`, `"${tag}"`);
+
+                    try {
+                        const url = `https://www.reddit.com/r/${sub}/search.json?q=${encodeURIComponent(tag)}&restrict_sr=1&limit=20&sort=relevance&t=year`;
+                        const res = await fetch(url, { headers: { 'User-Agent': 'ResearchTool/2.0' } });
+
+                        if (!res.ok) {
+                            if (res.status === 429) {
+                                addLog('Rate limited, waiting...', 'error');
+                                await sleep(5000);
+                            }
+                            continue;
+                        }
+
+                        const data = await res.json();
+                        const posts = data.data?.children || [];
+
+                        if (posts.length > 0) addLog(`  "${tag}" → ${posts.length} posts`);
+
+                        for (const post of posts.slice(0, 6)) {
+                            const p = post.data;
+                            postsSearched++;
+                            if (p.num_comments < 5) continue;
+
+                            try {
+                                const cUrl = `https://www.reddit.com${p.permalink}.json?limit=30&sort=top`;
+                                const cRes = await fetch(cUrl, { headers: { 'User-Agent': 'ResearchTool/2.0' } });
+                                if (!cRes.ok) continue;
+
+                                const cData = await cRes.json();
+                                for (const c of (cData[1]?.data?.children || [])) {
+                                    if (c.kind !== 't1') continue;
+                                    const cd = c.data;
+                                    if (seen.has(cd.id) || !cd.body || cd.body === '[deleted]' || cd.body.length < 40) continue;
+                                    seen.add(cd.id);
+
+                                    comments.push({
+                                        id: cd.id,
+                                        body: cd.body.substring(0, 3000),
+                                        score: cd.score || 0,
+                                        author: cd.author,
+                                        subreddit: sub,
+                                        postTitle: p.title,
+                                        postUrl: `https://reddit.com${p.permalink}`,
+                                        created: new Date(cd.created_utc * 1000).toISOString().split('T')[0],
+                                        matchedTag: tag
+                                    });
+                                }
+                                await sleep(150);
+                            } catch (e) {}
+                        }
+                        await sleep(300);
+                    } catch (e) {
+                        addLog(`  Error: ${tag}`, 'error');
+                    }
+                }
+                addLog(`✓ r/${sub} done`, 'success');
+            }
+
+            addLog(`\n🎉 Found ${comments.length} comments from ${postsSearched} posts`, 'success');
+            comments.sort((a, b) => b.score - a.score);
+            return comments;
+        }
+
+        function categorize(comments) {
+            const cats = {};
+            for (const c of comments) {
+                const text = c.body.toLowerCase();
+                const matched = [];
+                for (const tag of selectedTags) {
+                    if (text.includes(tag.toLowerCase())) matched.push(tag);
+                }
+                if (c.matchedTag && !matched.includes(c.matchedTag)) matched.push(c.matchedTag);
+                c.categories = matched.length ? matched : ['General'];
+                for (const cat of c.categories) {
+                    if (!cats[cat]) cats[cat] = [];
+                    cats[cat].push(c);
+                }
+            }
+            return cats;
+        }
+
+        function renderResults() {
+            document.getElementById('fullResults').classList.remove('hidden');
+            document.getElementById('resultsPreview').innerHTML = `<p style="color:#00d26a;">✓ ${allComments.length} comments found</p>`;
+            document.getElementById('totalComments').textContent = allComments.length;
+            document.getElementById('totalPosts').textContent = postsSearched;
+            const up = allComments.reduce((s, c) => s + c.score, 0);
+            document.getElementById('totalUpvotes').textContent = up > 1000 ? Math.round(up/1000) + 'K' : up;
+
+            const sorted = Object.entries(categorizedComments).sort((a,b) => b[1].length - a[1].length).slice(0, 10);
+            document.getElementById('categoryFilters').innerHTML = `
+                <button class="filter-tab active" onclick="filterC('all',this)">All (${allComments.length})</button>
+                ${sorted.map(([cat, items]) => `<button class="filter-tab" onclick="filterC('${escAttr(cat)}',this)">${escHtml(cat)} (${items.length})</button>`).join('')}
+            `;
+            renderComments(allComments);
+        }
+
+        function filterC(cat, btn) {
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            renderComments(cat === 'all' ? allComments : (categorizedComments[cat] || []));
+        }
+
+        function renderComments(comments) {
+            const g = document.getElementById('commentsGrid');
+            if (!comments.length) { g.innerHTML = '<p style="color:#888;text-align:center;padding:60px;">No comments</p>'; return; }
+            g.innerHTML = comments.slice(0, 150).map(c => `
+                <div class="comment-card">
+                    <div class="comment-post-title">📝 <a href="${c.postUrl}" target="_blank">${escHtml(c.postTitle.substring(0,100))}</a></div>
+                    <div class="comment-header">
+                        <div class="comment-body">${escHtml(c.body.substring(0,600))}${c.body.length > 600 ? '...' : ''}</div>
+                        <div class="comment-stats">👍 ${c.score}</div>
+                    </div>
+                    <div class="comment-tags">${c.categories.slice(0,4).map(cat => `<span class="comment-tag">${escHtml(cat)}</span>`).join('')}</div>
+                    <div class="comment-meta"><span>r/${c.subreddit} • u/${c.author}</span><span>${c.created}</span></div>
+                </div>
+            `).join('');
+        }
+
+        function exportCSV() {
+            if (!allComments.length) return;
+            const h = ['Comment','Score','Author','Subreddit','Post','Categories','Date','URL'];
+            const rows = allComments.map(c => [`"${c.body.replace(/"/g,'""').replace(/\n/g,' ')}"`,c.score,c.author,c.subreddit,`"${c.postTitle.replace(/"/g,'""')}"`,`"${c.categories.join(', ')}"`,c.created,c.postUrl]);
+            download([h.join(','), ...rows.map(r => r.join(','))].join('\n'), `reddit_${currentTopic.replace(/\s+/g,'_')}.csv`, 'text/csv');
+        }
+
+        function exportJSON() {
+            if (!allComments.length) return;
+            download(JSON.stringify({topic:currentTopic,tags:selectedTags,subreddits:selectedSubreddits,comments:allComments},null,2), `reddit_${currentTopic.replace(/\s+/g,'_')}.json`, 'application/json');
+        }
+
+        function download(content, name, type) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([content], {type}));
+            a.download = name;
+            a.click();
+        }
+
+        function showLoading(t, s) { document.getElementById('loadingText').textContent = t; document.getElementById('loadingSubtext').textContent = s; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+        function updateLoading(t, s) { document.getElementById('loadingText').textContent = t; document.getElementById('loadingSubtext').textContent = s; }
+        function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+        function clearLog() { document.getElementById('loadingLog').innerHTML = ''; }
+        function addLog(m, type='') { const d = document.createElement('div'); d.className = type; d.textContent = m; const l = document.getElementById('loadingLog'); l.appendChild(d); l.scrollTop = l.scrollHeight; }
+        function showError(id, m) { document.getElementById(id).textContent = m; document.getElementById(id).classList.remove('hidden'); }
+        function hideError(id) { document.getElementById(id).classList.add('hidden'); }
+        function escHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+        function escAttr(t) { return t.replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        document.getElementById('topicInput').addEventListener('keypress', e => { if (e.key === 'Enter') generateTags(); });
+        document.getElementById('newTagInput').addEventListener('keypress', e => { if (e.key === 'Enter') addCustomTag(); });
+        document.getElementById('newSubInput').addEventListener('keypress', e => { if (e.key === 'Enter') addCustomSubreddit(); });
+    </script>
+</body>
+</html>
